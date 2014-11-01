@@ -102,20 +102,19 @@ class Window(wx.Frame):
         self.listmenu[2].Enable()
 
     def newCreate(self):
-        self.newwindow = newpanel.NewWindows(self.panel2, self.queue)
+        self.newwindow = newpanel.NewWindows(self.panel2)
 
     def installPanel(self, event):
         self.panel2.Hide()
-        self.panel3.Show()
         self.panel4.Hide()
+        self.panel3.Show()
         self.listmenu[0].Enable()
         self.listmenu[1].Disable()
         self.listmenu[2].Enable()
         self.installwindow.startb.SetFocus()
 
     def installCreate(self):
-        self.installwindow = installpanel.InstallWindows(
-            self.panel3, self.queue)
+        self.installwindow = installpanel.InstallWindows(self.panel3)
 
     def infoPanel(self, event):
         self.panel2.Hide()
@@ -129,8 +128,7 @@ class Window(wx.Frame):
         self.infowindow = infopanel.NewWindows(self.panel4)
 
     def OnExit(self, event):
-        self.newwindow.OnExit()
-        self.installwindow.OnExit()
+        globalvalue.RunFlag = False
         self.Destroy()
 
 

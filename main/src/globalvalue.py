@@ -2,6 +2,12 @@
 # coding:utf-8
 
 import plugin
+import Queue
+
+QNewReport = Queue.Queue()
+QInstallReport = Queue.Queue()
+
+RunFlag = True
 
 LogPath = 'log'
 PluginPath = 'plugin'

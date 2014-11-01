@@ -11,21 +11,20 @@ import os
 import csv
 import listctrl
 
-Flag = True
 Waitexec = False
 
 
 class ReportThread(threading.Thread):
 
-    def __init__(self, grid, scan_out):
+    def __init__(self, grid):
         threading.Thread.__init__(self)
-        self.scan_out = scan_out
+        self.scan_out = globalvalue.QInstallReport
         self.grid = grid
 
     # task "{'ip':'ok.'}"
     def run(self):
-        global Flag, Waitexec
-        while Flag:
+        global Waitexec
+        while globalvalue.RunFlag:
             try:
                 task = self.scan_out.get(False)
                 print task
@@ -41,17 +40,16 @@ class ReportThread(threading.Thread):
 
 class InstallWindows():
 
-    def __init__(self, panel, queue):
+    def __init__(self, panel):
+
         self.exec_in = Queue.Queue()
-        self.queue = queue
-        self.plugin = globalvalue.Plugin
-        self.devices = devicessh.DeviceSsh(
-            exec_in=self.exec_in, out=self.queue)
+        self.plugin  = globalvalue.Plugin
+        self.execdev = devicessh.DeviceSsh(self.exec_in)
         self.InitGridBag(panel)
         self.reportthread()
 
     def reportthread(self):
-        t = ReportThread(self.lstSucceedResults, self.queue)
+        t = ReportThread(self.lstSucceedResults)
         t.start()
 
     def InitGridBag(self, panel):
@@ -179,15 +177,14 @@ class InstallWindows():
         task.append("exec over")
         for item in task:
             self.exec_in.put(item)
-        self.devices.execScript(len(task))
+        self.execdev.execScript(len(task))
         pass
 
     def OnUninstall(self, event):
         self.ExecScript('Uninstall')
 
     def OnExit(self):
-        global Flag
-        Flag = False
+        pass
 
     def OnWarning(self, mess, title):
         dlg = wx.MessageDialog(None, mess, title, wx.OK | wx.ICON_QUESTION)

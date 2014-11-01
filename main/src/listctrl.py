@@ -6,12 +6,16 @@ import wx
 import globalvalue
 import os
 import log
+import Queue
+import devicessh
 
 
 class ListCtrlCreate():
 
     def __init__(self, panel, rect):
         self.panel = panel
+        self.queue = Queue.Queue()
+        self.refreshdev = devicessh.DeviceSsh(self.queue)
 
         self.lstSucceedResults = wx.ListCtrl(
             panel,
@@ -27,8 +31,8 @@ class ListCtrlCreate():
         for i, string in enumerate(headings):
             self.lstSucceedResults.InsertColumn(
                 col=i, heading=string, width=widths[i])
-        self.lstSucceedResults.Bind(
-            wx.EVT_LIST_ITEM_ACTIVATED, self.OnDoubleLeftClick, self.lstSucceedResults)
+#        self.lstSucceedResults.Bind(
+#            wx.EVT_LIST_ITEM_ACTIVATED, self.OnDoubleLeftClick, self.lstSucceedResults)
 
         self.menu = wx.Menu()
         self.copymenu = wx.Menu()
@@ -36,7 +40,7 @@ class ListCtrlCreate():
             item = self.copymenu.Append(-1, text)
             self.panel.Bind(wx.EVT_MENU, self.OnCopyItemSelected, item)
         self.menu.AppendMenu(-1, 'Copy..', self.copymenu)
-        for text in ['Refesh']:
+        for text in ['Refresh','Get Log']:
             item = self.menu.Append(-1, text)
             self.panel.Bind(wx.EVT_MENU, self.OnMenuItemSelected, item)
         self.menu.AppendSeparator()
@@ -65,6 +69,8 @@ class ListCtrlCreate():
             return
         for index in indexs:
             self.MenuExec(index, menu)
+        if menu == 'Refresh':
+            self.refreshdev.scan(len(indexs))
 
     def OnCopyItemSelected(self, event):
         menu = self.copymenu.FindItemById(event.GetId()).GetText()
@@ -86,11 +92,27 @@ class ListCtrlCreate():
             log.OnWarning("Unable to open the clipboard", "Error")
 
     def MenuExec(self, index, item):
+        print item
         if item in globalvalue.ListTitle:
             i = globalvalue.ListTitle.index(item)
             return self.GetItem(index, i)
         elif item == "Refresh":
+            refresh = {}
+            refresh['type'] = self.GetItem(index, col=0)
+            refresh['ip'] = self.GetItem(index, col=1)
+            refresh['user'] = self.GetItem(index, col=2)
+            refresh['passwd'] = self.GetItem(index, col=3)
+            refresh['mac'] = self.GetItem(index, col=4)
+            self.SetStringItem(index, 5, 'Refreshing')
+            self.queue.put(refresh)
             print 'Refresh'
+        elif item == 'Get Log':
+            logfile = globalvalue.LogPath + os.path.sep + self.GetItem(index, col=0) + '-' + self.GetItem(index,
+                                                                                                      col=1) + '.Log'
+            try:
+                os.startfile(logfile)
+            except:
+                log.OnWarning(logfile, 'open log file err.')
 
     def GetSelectedIndexs(self):
         selectid = self.GetFirstSelected()

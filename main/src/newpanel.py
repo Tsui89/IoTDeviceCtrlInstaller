@@ -15,7 +15,7 @@ import listctrl
 
 ipformat = r"\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b"
 lanformat = r"\b(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(x|X)\b"
-Flag = True
+
 Waitinstall = False
 Safeflag = False
 
@@ -31,8 +31,7 @@ class ReportThread(threading.Thread):
 
     # task "{'ip':'ok.'}"
     def run(self):
-        global Flag
-        while Flag:
+        while globalvalue.RunFlag:
             try:
                 task = self.scan_out.get(False)
                 if task == 'scan over':
@@ -66,26 +65,27 @@ def GetLocal():
 
 class NewWindows():
 
-    def __init__(self, panel, queue):
-        self.queue = queue
+    def __init__(self, panel ):
+
         self.plugin = globalvalue.Plugin
         self.InitDevice()
         self.InitGridBag(panel)
         self.reportthread()
 
     def InitDevice(self):
-        self.scan_in = Queue.Queue()
-        self.report_out = Queue.Queue()
+
         self.inst_in = Queue.Queue()
-        self.devices = devicessh.DeviceSsh(scan_queue_in=self.scan_in, install_queue_in=self.inst_in,
-                                           report_out=self.report_out, out=self.queue)
+        self.scan_in = Queue.Queue()
+
+        self.scandev = devicessh.DeviceSsh(self.scan_in)
+        self.installdev= devicessh.DeviceSsh(self.inst_in)
         self.plugintype = self.plugin.GetPluginType()
         # print self.plugin
         print self.plugintype
 
     def reportthread(self):
         t = ReportThread(
-            self.scanb, self.installb, self.lstSucceedResults, self.report_out)
+            self.scanb, self.installb, self.lstSucceedResults, globalvalue.QNewReport)
         t.start()
 
     def InitGridBag(self, panel):
@@ -195,7 +195,7 @@ class NewWindows():
         task.append("scan over")
         for item in task:
             self.scan_in.put(item)
-        self.devices.scan(len(task))
+        self.scandev.scan(len(task))
         self.scanb.Disable()
         print 'scan'
 
@@ -250,10 +250,9 @@ class NewWindows():
         task.append("install over")
         for item in task:
             self.inst_in.put(item)
-        self.devices.install(len(task))
+        self.installdev.install(len(task))
         self.installb.Disable()
 
     def OnExit(self):
-        global Flag
-        Flag = False
-        self.devices.Destroy()
+        pass
+

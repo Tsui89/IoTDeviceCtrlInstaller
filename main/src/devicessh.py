@@ -9,7 +9,6 @@ import os
 import globalvalue
 
 socket.setdefaulttimeout(1)
-Flag = True
 
 
 def GetTimeString():
@@ -43,14 +42,14 @@ def GetLogFile(ssh, type, ip):
 
 class InstallThread(threading.Thread):
 
-    def __init__(self, install_in, install_out, out):
+    def __init__(self, install_in):
         threading.Thread.__init__(self)
         self.inst_in = install_in
-        self.inst_out = install_out
-        self.out = out
+        self.inst_out = globalvalue.QNewReport
+        self.out = globalvalue.QInstallReport
 
     def run(self):
-        while Flag:
+        while globalvalue.RunFlag:
             try:
                 task = self.inst_in.get(False)
                 if task == 'install over':
@@ -108,21 +107,20 @@ class InstallThread(threading.Thread):
 
 class ScanThread(threading.Thread):
 
-    def __init__(self, scan_in, scan_out, out):
+    def __init__(self, scan_in):
         threading.Thread.__init__(self)
         self.scan_in = scan_in
-        self.scan_out = scan_out
-        self.out = out
+        self.scan_out = globalvalue.QNewReport
+        self.out = globalvalue.QInstallReport
 
     # task "{'type':'','ip':'','user':'','passwd':''}"
     def run(self):
-        while Flag:
+        while globalvalue.RunFlag:
             try:
                 task = self.scan_in.get(False)
                 if task == 'scan over':
                     self.scan_out.put(task)
                     break
-                # print task
                 try:
                     testhost = socket.socket(
                         socket.AF_INET, socket.SOCK_STREAM)
@@ -180,14 +178,13 @@ class ScanThread(threading.Thread):
 
 class ExecThread(threading.Thread):
 
-    def __init__(self, exec_in, exec_out, out):
+    def __init__(self, exec_in):
         threading.Thread.__init__(self)
         self.exec_in = exec_in
-        self.exec_out = exec_out
-        self.out = out
+        self.out = globalvalue.QInstallReport
 
     def run(self):
-        while Flag:
+        while globalvalue.RunFlag:
             try:
                 task = self.exec_in.get(False)
                 if task == 'exec over':
@@ -220,35 +217,29 @@ class ExecThread(threading.Thread):
 
 class DeviceSsh:
 
-    def __init__(self, scan_queue_in=None, install_queue_in=None, report_out=None, exec_in=None, out=None):
-        self.scan_in = scan_queue_in
-        self.report_out = report_out
-        self.inst_in = install_queue_in
-        self.exec_in = exec_in
-        self.out = out
+    def __init__(self, queue_in=None):
+        self.queue_in = queue_in
 
     def Destroy(self):
-        global Flag
-        Flag = False
-
-    def threads(self, num, threadfunc, q_in, q_out1, q_out2):
+        pass
+    def threads(self, num, threadfunc, q_in):
         threads_arr = []
         if num > 10:
             for i in range(0, 10):
-                threads_arr.append(threadfunc(q_in, q_out1, q_out2))
+                threads_arr.append(threadfunc(q_in))
         else:
             for i in range(num):
-                threads_arr.append(threadfunc(q_in, q_out1, q_out2))
+                threads_arr.append(threadfunc(q_in))
         for t in threads_arr:
             t.setDaemon(True)
             t.start()
 
     def scan(self, num=10):
-        self.threads(num, ScanThread, self.scan_in, self.report_out, self.out)
+        self.threads(num, ScanThread, self.queue_in)
 
     def install(self, num=10):
         self.threads(
-            num, InstallThread, self.inst_in, self.report_out, self.out)
+            num, InstallThread, self.queue_in)
 
     def execScript(self, num=10):
-        self.threads(num, ExecThread, self.exec_in, self.report_out, self.out)
+        self.threads(num, ExecThread, self.queue_in)
