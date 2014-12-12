@@ -1,15 +1,13 @@
 #!/bin/python
 # coding:utf-8
 import wx
-import threading
 
 
-class NewWindows():
-
+class InfoWindows():
     def __init__(self, panel):
-        self.InitGridBag(panel)
+        self.InitPanel(panel)
 
-    def InitGridBag(self, panel):
+    def InitPanel(self, panel):
         self.infosb = wx.StaticBox(
             panel,
             label=u' Software Information ',
@@ -18,7 +16,7 @@ class NewWindows():
         rect = self.infosb.Rect
         wx.StaticText(
             panel,
-            label=u'有问题请联系:756661204@qq.com',
+            label=u'email:756661204@qq.com',
             pos=((rect[0] + rect[2] - 50) / 2, rect[1] + rect[3] - 30))
 
 

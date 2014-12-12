@@ -13,9 +13,7 @@ import log
 
 
 class Window(wx.Frame):
-
     def __init__(self):
-        self.queue = Queue.Queue()
         self.initUI()
 
     def initUI(self):
@@ -64,7 +62,7 @@ class Window(wx.Frame):
         self.menuimage = [
             'icon//newbutton.png',
             'icon//installed.png',
-            'icon//started.png']
+            'icon//info.png']
         self.listmenu = []
         menulabel = [
             u'添加',
@@ -86,7 +84,7 @@ class Window(wx.Frame):
             wx.StaticText(self.panel1,
                           label=menulabel[i],
                           pos=(x + 10, rect[1] + rect[3] / 4 * (i + 1) + 30)
-                          )
+            )
 
         self.Bind(wx.EVT_BUTTON, self.newPanel, self.listmenu[0])
         self.Bind(wx.EVT_BUTTON, self.installPanel, self.listmenu[1])
@@ -94,8 +92,8 @@ class Window(wx.Frame):
 
     def newPanel(self, event):
         self.panel3.Hide()
-        self.panel2.Show()
         self.panel4.Hide()
+        self.panel2.Show()
         self.newwindow.scanb.SetFocus()
         self.listmenu[0].Disable()
         self.listmenu[1].Enable()
@@ -114,7 +112,8 @@ class Window(wx.Frame):
         self.installwindow.startb.SetFocus()
 
     def installCreate(self):
-        self.installwindow = installpanel.InstallWindows(self.panel3)
+        self.installwindow = installpanel.InstallWindows(
+            self.panel3)
 
     def infoPanel(self, event):
         self.panel2.Hide()
@@ -125,15 +124,16 @@ class Window(wx.Frame):
         self.listmenu[2].Disable()
 
     def infoCreate(self):
-        self.infowindow = infopanel.NewWindows(self.panel4)
+        self.infowindow = infopanel.InfoWindows(self.panel4)
 
     def OnExit(self, event):
+        self.newwindow.OnExit()
+        self.installwindow.OnExit()
         globalvalue.RunFlag = False
         self.Destroy()
 
 
 class MyApp(wx.App):
-
     def __init__(self):
         wx.App.__init__(self, redirect=False, filename=r"Runlog.txt")
 

@@ -4,9 +4,14 @@
 import plugin
 import Queue
 
+WidgetSize = (110, 25)
+ButtunMaxSize = (60, 25)
+ButtunMinSize = (40, 20)
+
+MaxThreadsCount = 10
+
 QNewReport = Queue.Queue()
 QInstallReport = Queue.Queue()
-
 RunFlag = True
 
 LogPath = 'log'

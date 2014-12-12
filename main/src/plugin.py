@@ -97,7 +97,6 @@ class PluginDict():
         self.plugindict[type]['User'] = user
         self.plugindict[type]['Password'] = passwd
         with open(self.GetPluginConfPath(type), 'w') as json_file:
-            dictconf = {}
             dictconf = deepcopy(self.GetPluginInfo(type))
             del dictconf['Path']
             json_str = json.dumps(dictconf, sort_keys=True, indent=4, separators=(',', ': '))

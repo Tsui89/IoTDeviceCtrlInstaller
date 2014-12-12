@@ -20,28 +20,30 @@ def GetLogFile(ssh, type, ip):
     logfile = type + '-' + ip + '.Log'
     command = "if [ -f 'Device_Control/%s/%s' ]; then cat  'Device_Control/%s/%s';else echo 'no logfile'; fi" % (
         type, remotefile, type, remotefile)
-    stdin, stdout, stderr = ssh.exec_command(command)
-    log = stdout.read().strip("\n")
-    if log == 'no logfile':
-        return
+    try:
+        stdin, stdout, stderr = ssh.exec_command(command)
+        log = stdout.read().strip("\n")
+    except:
+        print 'get log: ssh err.'
     else:
-        path = os.getcwd()
-        workdir = path + os.path.sep + globalvalue.LogPath
-        if not os.path.isdir(workdir):
-            os.mkdir(workdir)
-        os.chdir(workdir)
-        with open(logfile, 'w') as f:
-            try:
-                f.write(log)
-            except:
-                print 'write log file err.'
-            finally:
-                f.close()
-        os.chdir(path)
+        if log == 'no logfile':
+            return
+        else:
+            path = os.getcwd()
+            workdir = path + os.path.sep + globalvalue.LogPath
+            if not os.path.isdir(workdir):
+                os.mkdir(workdir)
+            os.chdir(workdir)
+            with closing(open(logfile, 'w')) as f:
+                try:
+                    f.write(log)
+                except:
+                    print 'write log file err.'
+
+            os.chdir(path)
 
 
 class InstallThread(threading.Thread):
-
     def __init__(self, install_in):
         threading.Thread.__init__(self)
         self.inst_in = install_in
@@ -55,6 +57,10 @@ class InstallThread(threading.Thread):
                 if task == 'install over':
                     self.inst_out.put(task)
                     break
+                else:
+                    for key in ['ip', 'user', 'passwd', 'type', 'package', 'tar', 'path', 'script', 'parameter']:
+                        if key not in task:
+                            break
                 try:
                     ssh = paramiko.SSHClient()
                     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -106,7 +112,6 @@ class InstallThread(threading.Thread):
 
 
 class ScanThread(threading.Thread):
-
     def __init__(self, scan_in):
         threading.Thread.__init__(self)
         self.scan_in = scan_in
@@ -121,11 +126,15 @@ class ScanThread(threading.Thread):
                 if task == 'scan over':
                     self.scan_out.put(task)
                     break
+                else:
+                    for key in ['ip', 'user', 'passwd', 'type']:
+                        if key not in task:
+                            break
+                #print task
                 try:
                     testhost = socket.socket(
                         socket.AF_INET, socket.SOCK_STREAM)
                     testhost.connect((task['ip'], 22))
-                    testhost.shutdown
                     testhost.close()
                 except:
                     pass
@@ -177,7 +186,6 @@ class ScanThread(threading.Thread):
 
 
 class ExecThread(threading.Thread):
-
     def __init__(self, exec_in):
         threading.Thread.__init__(self)
         self.exec_in = exec_in
@@ -190,6 +198,10 @@ class ExecThread(threading.Thread):
                 if task == 'exec over':
                     self.out.put(task)
                     break
+                else:
+                    for key in ['ip', 'user', 'passwd', 'type', 'path', 'script', 'parameter']:
+                        if key not in task:
+                            break
                 try:
                     ssh = paramiko.SSHClient()
                     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -216,16 +228,19 @@ class ExecThread(threading.Thread):
 
 
 class DeviceSsh:
+    def __init__(self):
+        self.queue_in = Queue.Queue()
 
-    def __init__(self, queue_in=None):
-        self.queue_in = queue_in
+    def AddJob(self, task):
+        self.queue_in.put(task)
 
     def Destroy(self):
         pass
+
     def threads(self, num, threadfunc, q_in):
         threads_arr = []
-        if num > 10:
-            for i in range(0, 10):
+        if num > globalvalue.MaxThreadsCount:
+            for i in range(globalvalue.MaxThreadsCount):
                 threads_arr.append(threadfunc(q_in))
         else:
             for i in range(num):

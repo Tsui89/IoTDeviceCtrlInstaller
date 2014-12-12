@@ -15,7 +15,6 @@ Waitexec = False
 
 
 class ReportThread(threading.Thread):
-
     def __init__(self, grid):
         threading.Thread.__init__(self)
         self.scan_out = globalvalue.QInstallReport
@@ -39,12 +38,9 @@ class ReportThread(threading.Thread):
 
 
 class InstallWindows():
-
     def __init__(self, panel):
-
-        self.exec_in = Queue.Queue()
-        self.plugin  = globalvalue.Plugin
-        self.execdev = devicessh.DeviceSsh(self.exec_in)
+        self.plugin = globalvalue.Plugin
+        self.execdev = devicessh.DeviceSsh()
         self.InitGridBag(panel)
         self.reportthread()
 
@@ -63,18 +59,19 @@ class InstallWindows():
 
         self.lstSucceedResults = listctrl.ListCtrlCreate(panel, rect)
         self.inputb = wx.Button(
-            panel, label=u"导入", pos=(rect[0] + 10, rect[1] + rect[3] + 5), size=(40, 20))
+            panel, label=u"导入", pos=(rect[0] + 10, rect[1] + rect[3] + 5), size=globalvalue.ButtunMinSize)
         self.outputb = wx.Button(
-            panel, label=u"导出", pos=(rect[0] + 60, rect[1] + rect[3] + 5), size=(40, 20))
+            panel, label=u"导出", pos=(rect[0] + 60, rect[1] + rect[3] + 5), size=globalvalue.ButtunMinSize)
         self.delb = wx.Button(
-            panel, label="Del", pos=(rect[0] + 110, rect[1] + rect[3] + 5), size=(40, 20))
+            panel, label="Del", pos=(rect[0] + 110, rect[1] + rect[3] + 5), size=globalvalue.ButtunMinSize)
 
         self.startb = wx.Button(
-            panel, label="Start", pos=(rect[0] + rect[2] - 300, rect[1] + rect[3] + 5))
+            panel, label="Start", pos=(rect[0] + rect[2] - 260, rect[1] + rect[3] + 5), size=globalvalue.ButtunMaxSize)
         self.stopb = wx.Button(
-            panel, label="Stop", pos=(rect[0] + rect[2] - 200, rect[1] + rect[3] + 5))
+            panel, label="Stop", pos=(rect[0] + rect[2] - 180, rect[1] + rect[3] + 5), size=globalvalue.ButtunMaxSize)
         self.uninstallb = wx.Button(
-            panel, label="Uninstall", pos=(rect[0] + rect[2] - 100, rect[1] + rect[3] + 5))
+            panel, label="Uninstall", pos=(rect[0] + rect[2] - 100, rect[1] + rect[3] + 5),
+            size=globalvalue.ButtunMaxSize)
 
         self.startb.Bind(wx.EVT_BUTTON, self.OnStart, self.startb)
         self.stopb.Bind(wx.EVT_BUTTON, self.OnStop, self.stopb)
@@ -100,7 +97,7 @@ class InstallWindows():
                 dictinput['mac'] = line[4]
                 dictinput['status'] = line[5]
                 dictinput['version'] = line[6]
-                self.lstSucceedResults.UpdateData(dictinput)
+                self.lstSucceedResults.UpdateData(dictinput.copy())
         dlg.Destroy()
 
     def OnOutput(self, event):
@@ -118,12 +115,12 @@ class InstallWindows():
             writer = csv.DictWriter(
                 file(filename, 'wb'), fieldnames=fieldnames)
             dictcsv = []
+            dictoutput = {}
             for i in range(self.lstSucceedResults.GetItemCount()):
-                dictoutput = {}
                 for j, title in enumerate(globalvalue.ListTitle):
                     dictoutput[title] = self.lstSucceedResults.GetItem(
                         i, col=j)
-                dictcsv.append(dictoutput)
+                dictcsv.append(dictoutput.copy())
             writer.writerows(dictcsv)
         dlg.Destroy()
 
@@ -156,9 +153,9 @@ class InstallWindows():
         else:
             Waitexec = False
             return
-        task = []
+
+        dictstart = {}
         while i != -1:
-            dictstart = {}
             dictstart['type'] = self.lstSucceedResults.GetItem(i, col=0)
             dictstart['ip'] = self.lstSucceedResults.GetItem(i, col=1)
             dictstart['user'] = self.lstSucceedResults.GetItem(i, col=2)
@@ -173,11 +170,10 @@ class InstallWindows():
                 self.lstSucceedResults.GetItem(i, col=0), script)
             dictstart['parameter'] = response
             i = self.lstSucceedResults.GetNextSelected(i)
-            task.append(dictstart)
-        task.append("exec over")
-        for item in task:
-            self.exec_in.put(item)
-        self.execdev.execScript(len(task))
+            self.execdev.AddJob(dictstart.copy())
+        self.execdev.AddJob("exec over")
+
+        self.execdev.execScript(self.lstSucceedResults.GetSelectedItemCount())
         pass
 
     def OnUninstall(self, event):

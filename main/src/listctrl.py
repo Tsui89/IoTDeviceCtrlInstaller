@@ -6,33 +6,32 @@ import wx
 import globalvalue
 import os
 import log
-import Queue
 import devicessh
 
 
 class ListCtrlCreate():
-
     def __init__(self, panel, rect):
         self.panel = panel
-        self.queue = Queue.Queue()
-        self.refreshdev = devicessh.DeviceSsh(self.queue)
-
+        self.refreshdev = devicessh.DeviceSsh()
         self.lstSucceedResults = wx.ListCtrl(
             panel,
-            pos=(rect[0] + 10, rect[1] + 20),
-            style=wx.LC_REPORT | wx.LC_HRULES | wx.LC_VRULES,
-            size=(rect[2] - 20, rect[3] - 30)
+            pos=(rect[0] + 10, rect[1] + 40),
+            style=wx.LC_REPORT | wx.LC_HRULES | wx.LC_VRULES | wx.LC_NO_HEADER,
+            size=(rect[2] - 20, rect[3] - 50)
         )
         w = self.lstSucceedResults.Rect[2]
 
         headings = globalvalue.ListTitle
         widths = [w * 0.16, w * 0.15, w * 0.0,
                   w * 0.0, w * 0.2, w * 0.3, w * 0.15]
+        x = 0
         for i, string in enumerate(headings):
+            if widths[i] != 0:
+                wx.StaticText(panel, -1, string, pos=(rect[0] + 10 + x, rect[1] + 20), size=(widths[i], 20),
+                              style=wx.ALIGN_CENTER)
+                x += widths[i]
             self.lstSucceedResults.InsertColumn(
-                col=i, heading=string, width=widths[i])
-#        self.lstSucceedResults.Bind(
-#            wx.EVT_LIST_ITEM_ACTIVATED, self.OnDoubleLeftClick, self.lstSucceedResults)
+                col=i, heading=string, format=wx.LIST_FORMAT_LEFT, width=widths[i])
 
         self.menu = wx.Menu()
         self.copymenu = wx.Menu()
@@ -40,7 +39,7 @@ class ListCtrlCreate():
             item = self.copymenu.Append(-1, text)
             self.panel.Bind(wx.EVT_MENU, self.OnCopyItemSelected, item)
         self.menu.AppendMenu(-1, 'Copy..', self.copymenu)
-        for text in ['Refresh','Get Log']:
+        for text in ['Refresh', 'Get Log']:
             item = self.menu.Append(-1, text)
             self.panel.Bind(wx.EVT_MENU, self.OnMenuItemSelected, item)
         self.menu.AppendSeparator()
@@ -65,22 +64,24 @@ class ListCtrlCreate():
     def OnMenuItemSelected(self, event):
         menu = self.menu.FindItemById(event.GetId()).GetText()
         indexs = self.GetSelectedIndexs()
-        if indexs == None:
+        if indexs == []:
             return
-        for index in indexs:
-            self.MenuExec(index, menu)
-        if menu == 'Refresh':
-            self.refreshdev.scan(len(indexs))
+        else:
+            for index in indexs:
+                self.MenuExec(index, menu)
+            if menu == 'Refresh':
+                self.refreshdev.scan(len(indexs))
 
     def OnCopyItemSelected(self, event):
         menu = self.copymenu.FindItemById(event.GetId()).GetText()
         indexs = self.GetSelectedIndexs()
-        if indexs == None:
+        if indexs == []:
             return
-        text = ''
-        for index in indexs:
-            text += self.MenuExec(index, menu) + ';;'
-        self.OnCopyClipboard(text)
+        else:
+            text = ''
+            for index in indexs:
+                text += self.MenuExec(index, menu)
+            self.OnCopyClipboard(text)
 
     def OnCopyClipboard(self, text):
         print text
@@ -92,23 +93,22 @@ class ListCtrlCreate():
             log.OnWarning("Unable to open the clipboard", "Error")
 
     def MenuExec(self, index, item):
-        print item
         if item in globalvalue.ListTitle:
             i = globalvalue.ListTitle.index(item)
             return self.GetItem(index, i)
         elif item == "Refresh":
-            refresh = {}
-            refresh['type'] = self.GetItem(index, col=0)
-            refresh['ip'] = self.GetItem(index, col=1)
-            refresh['user'] = self.GetItem(index, col=2)
-            refresh['passwd'] = self.GetItem(index, col=3)
-            refresh['mac'] = self.GetItem(index, col=4)
-            self.SetStringItem(index, 5, 'Refreshing')
-            self.queue.put(refresh)
-            print 'Refresh'
+            dictrefresh = {}
+            if self.GetItem(index, col=0) != "":
+                dictrefresh['type'] = self.GetItem(index, col=0)
+                dictrefresh['ip'] = self.GetItem(index, col=1)
+                dictrefresh['user'] = self.GetItem(index, col=2)
+                dictrefresh['passwd'] = self.GetItem(index, col=3)
+                self.SetStringItem(index, 5, 'Refreshing...')
+                self.refreshdev.AddJob(dictrefresh.copy())
+                print 'Refresh'
         elif item == 'Get Log':
-            logfile = globalvalue.LogPath + os.path.sep + self.GetItem(index, col=0) + '-' + self.GetItem(index,
-                                                                                                      col=1) + '.Log'
+            logfile = globalvalue.LogPath + os.path.sep + self.GetItem(index, col=0) + \
+                      '-' + self.GetItem(index, col=1) + '.Log'
             try:
                 os.startfile(logfile)
             except:
@@ -116,8 +116,6 @@ class ListCtrlCreate():
 
     def GetSelectedIndexs(self):
         selectid = self.GetFirstSelected()
-        if selectid == -1:
-            return None
         indexs = []
         while selectid != -1:
             indexs.append(selectid)
