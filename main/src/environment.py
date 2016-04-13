@@ -12,5 +12,5 @@ def CleanLogFile():
         shutil.rmtree(workdir)
     print 'clean log'
 
-def EnviromentClean():
+def EnvironmentClean():
     CleanLogFile()
